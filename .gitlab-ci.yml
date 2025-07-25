@@ -40,21 +40,33 @@ build:
   stage: build
   image: node:14
   script:
-    - mkdir -p public
-    - cp index.html style.css script.js files_metadata.json public/
-    - cp *.m3u *.xml.gz public/
+    - echo "Arquivos já estão no diretório correto"
+    - ls -la
   artifacts:
     paths:
-      - public
+      - "*.html"
+      - "*.css"
+      - "*.js"
+      - "*.json"
+      - "*.m3u"
+      - "*.xml.gz"
     expire_in: 1 week
 
 pages:
   stage: deploy
   dependencies:
+    - setup
+    - download
     - build
   script:
-    - mv public public_html
+    - echo "Todos os arquivos estão no mesmo local do .gitlab-ci.yml"
+    - ls -la
   artifacts:
     paths:
-      - public_html
+      - "*.html"
+      - "*.css"
+      - "*.js"
+      - "*.json"
+      - "*.m3u"
+      - "*.xml.gz"
     expire_in: 1 week
