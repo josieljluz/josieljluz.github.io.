@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playlists M3U e EPG para IPTV</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <header>
+        <h1>Playlists M3U e EPG para IPTV</h1>
+        <p>Atualizado automaticamente - Última atualização: <span id="last-update"></span></p>
+        <div id="metadata-info"></div>
+    </header>
+
+    <main>
+        <section id="playlists">
+            <h2><i class="fas fa-list"></i> Playlists M3U</h2>
+            <div class="files-container" id="m3u-files">
+                <div class="loading-card">
+                    <div class="loading-spinner"></div>
+                    <p>Carregando playlists...</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="epg">
+            <h2><i class="fas fa-calendar-alt"></i> Guias EPG</h2>
+            <div class="files-container" id="epg-files">
+                <div class="loading-card">
+                    <div class="loading-spinner"></div>
+                    <p>Carregando guias EPG...</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© <span id="current-year"></span> Playlists IPTV - Mantido por <a href="https://gitlab.com/josielluz" target="_blank" rel="noopener noreferrer">Josiel Luz</a></p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

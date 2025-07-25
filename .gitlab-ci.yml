@@ -1,0 +1,60 @@
+image: python:3.8
+
+stages:
+  - setup
+  - download
+  - build
+  - deploy
+
+variables:
+  TZ: "America/Sao_Paulo"
+
+cache:
+  paths:
+    - node_modules/
+
+setup:
+  stage: setup
+  image: node:14
+  script:
+    - npm install
+    - node generate_metadata.js
+  artifacts:
+    paths:
+      - files_metadata.json
+    expire_in: 1 hour
+
+download:
+  stage: download
+  before_script:
+    - pip install requests
+  script:
+    - python playlists.py
+  artifacts:
+    paths:
+      - "*.m3u"
+      - "*.xml.gz"
+    expire_in: 1 week
+
+build:
+  stage: build
+  image: node:14
+  script:
+    - mkdir -p public
+    - cp index.html style.css script.js files_metadata.json public/
+    - cp *.m3u *.xml.gz public/
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 week
+
+pages:
+  stage: deploy
+  dependencies:
+    - build
+  script:
+    - mv public public_html
+  artifacts:
+    paths:
+      - public_html
+    expire_in: 1 week
