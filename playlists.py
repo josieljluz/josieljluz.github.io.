@@ -83,7 +83,7 @@ def main():
         for ext, files in files_to_download.items():
             for filename, url in files.items():
                 save_path = os.path.join(OUTPUT_DIR, filename)
-                futures.append(executor.submit(download_file, url, save_path))
+                futures.append(executor.submit(download_file, url.strip(), save_path))
 
         for future in as_completed(futures):
             if not future.result():
