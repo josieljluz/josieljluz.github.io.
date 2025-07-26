@@ -59,15 +59,12 @@ pages:
     - download
     - build
   script:
-    - echo "Todos os arquivos estão no mesmo local do .gitlab-ci.yml"
-    - ls -la
+    - echo "Criando diretório public e movendo arquivos"
+    - mkdir -p public
+    - cp -r *.html *.css *.js *.json *.m3u *.xml.gz public/ 2>/dev/null || true
+    - echo "Arquivos copiados para public/"
+    - ls -la public/
   artifacts:
     paths:
-      - "*.html"
-      - "*.css"
-      - "*.js"
-      - "*.json"
-      - "*.m3u"
-      - "*.xml.gz"
-      - "public/"
+      - public
     expire_in: 1 week
