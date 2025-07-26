@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 HEADERS = {"User-Agent": "Mozilla/5.0"}
-OUTPUT_DIR = os.getcwd()
+OUTPUT_DIR = os.getcwd()  # Baixa na raiz do repositório
 TIMEOUT = 10
 RETRIES = 3
 MAX_WORKERS = 5
@@ -48,7 +48,19 @@ def main():
     logger.info(f"Diretório de trabalho: {OUTPUT_DIR}")
     logger.info("Removendo arquivos antigos...")
     
-    target_files = ["epgbrasil.m3u", "epgbrasil.xml.gz", "epgbrasilportugal.m3u", "epgbrasilportugal.xml.gz", "epgportugal.m3u", "epgportugal.xml.gz", "m3u@proton.me.m3u", "PiauiTV.m3u", "playlist.m3u", "playlists.m3u", "pornstars.m3u"]
+    target_files = [
+        "epgbrasil.m3u", 
+        "epgbrasil.xml.gz", 
+        "epgbrasilportugal.m3u", 
+        "epgbrasilportugal.xml.gz", 
+        "epgportugal.m3u", 
+        "epgportugal.xml.gz", 
+        "m3u@proton.me.m3u", 
+        "PiauiTV.m3u", 
+        "playlist.m3u", 
+        "playlists.m3u", 
+        "pornstars.m3u"
+    ]
     
     for filename in target_files:
         file_path = os.path.join(OUTPUT_DIR, filename)
