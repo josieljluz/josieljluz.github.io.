@@ -40,7 +40,7 @@ build:
   stage: build
   image: node:14
   script:
-    - echo "Arquivos já estão no diretório correto"
+    - echo "Arquivos já estão no diretório raiz"
     - ls -la
   artifacts:
     paths:
@@ -59,10 +59,10 @@ pages:
     - download
     - build
   script:
-    - echo "Criando diretório public e movendo arquivos"
+    - echo "Preparando diretório public..."
     - mkdir -p public
     - cp -r *.html *.css *.js *.json *.m3u *.xml.gz public/ 2>/dev/null || true
-    - echo "Arquivos copiados para public/"
+    - echo "Conteúdo do diretório public:"
     - ls -la public/
   artifacts:
     paths:
