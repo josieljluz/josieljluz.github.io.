@@ -69,4 +69,5 @@ pages:
       - "*.json"
       - "*.m3u"
       - "*.xml.gz"
+      - "public/"
     expire_in: 1 week
