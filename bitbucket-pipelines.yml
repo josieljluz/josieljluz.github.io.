@@ -1,0 +1,58 @@
+# bitbucket-pipelines.yml
+image: python:3.8
+
+pipelines:
+  default:
+    - parallel:
+      - step:
+          name: Setup
+          image: node:14
+          caches:
+            - node
+          script:
+            - npm install
+            - node generate_metadata.js
+          artifacts:
+            - files_metadata.json
+      
+      - step:
+          name: Download Playlists
+          script:
+            - pip install requests
+            - python playlists.py
+          artifacts:
+            - "*.m3u"
+            - "*.xml.gz"
+    
+    - step:
+        name: Build
+        image: node:14
+        caches:
+          - node
+        script:
+          - echo "Verificando arquivos baixados..."
+          - ls -la
+        artifacts:
+          - "*.html"
+          - "*.css"
+          - "*.js"
+          - "*.json"
+          - "*.m3u"
+          - "*.xml.gz"
+    
+    - step:
+        name: Deploy to Pages
+        deployment: production
+        trigger: manual  # Opcional: define se o deploy deve ser manual
+        script:
+          - echo "Preparando diretório public..."
+          - mkdir -p public
+          - cp -r *.html *.css *.js *.json *.m3u *.xml.gz public/ 2>/dev/null || true
+          - echo "Conteúdo do diretório public:"
+          - ls -la public/
+        artifacts:
+          - public/**
+
+definitions:
+  caches:
+    node: node_modules
