@@ -1,0 +1,119 @@
+image: python:3.8
+
+pipelines:
+  default:
+    - parallel:
+      - step:
+          name: Setup
+          image: node:14
+          caches:
+            - node
+          script:
+            - npm install
+            - node generate_metadata.js
+          artifacts:
+            - files_metadata.json
+      
+      - step:
+          name: Download Playlists
+          script:
+            - pip install requests
+            - python playlists.py
+          artifacts:
+            - "*.m3u"
+            - "*.M3U"
+            - "*.gz"
+            - "*.xml.gz"
+    
+    - step:
+        name: Build
+        image: node:14
+        caches:
+          - node
+        script:
+          - echo "Arquivos baixados na raiz:"
+          - ls -la
+        artifacts:
+          - "*.html"
+          - "*.css"
+          - "*.js"
+          - "*.json"
+          - "*.m3u"
+          - "*.M3U"
+          - "*.gz"
+          - "*.xml.gz"
+    
+    - step:
+        name: Deploy to Pages
+        deployment: production
+        script:
+          - echo "Preparando diretório public..."
+          - mkdir -p public
+          - cp -r *.html *.css *.js *.json *.m3u *.M3U *.gz *.xml.gz public/ 2>/dev/null || true
+          - echo "Conteúdo do diretório public:"
+          - ls -la public/
+        artifacts:
+          - public/**
+
+  # Pipeline agendado
+  custom:
+    auto-update:
+      - step:
+          name: Scheduled Setup
+          image: node:14
+          caches:
+            - node
+          script:
+            - npm install
+            - node generate_metadata.js
+          artifacts:
+            - files_metadata.json
+        
+      - step:
+          name: Scheduled Download
+          script:
+            - pip install requests
+            - python playlists.py
+          artifacts:
+            - "*.m3u"
+            - "*.M3U"
+            - "*.gz"
+            - "*.xml.gz"
+      
+      - step:
+          name: Scheduled Build
+          image: node:14
+          caches:
+            - node
+          script:
+            - echo "Arquivos baixados pelo agendamento:"
+            - ls -la
+          artifacts:
+            - "*.html"
+            - "*.css"
+            - "*.js"
+            - "*.json"
+            - "*.m3u"
+            - "*.M3U"
+            - "*.gz"
+            - "*.xml.gz"
+      
+      - step:
+          name: Scheduled Deploy
+          deployment: production
+          script:
+            - echo "Preparando public para deploy automático..."
+            - mkdir -p public
+            - cp -r *.html *.css *.js *.json *.m3u *.M3U *.gz *.xml.gz public/ 2>/dev/null || true
+            - echo "Conteúdo do public após deploy automático:"
+            - ls -la public/
+          artifacts:
+            - public/**
+      schedule:
+        - cron: "1 0 1-31/2 * *"
+          branches:
+            - main  # Altere para o nome do seu branch principal se necessário
+
+definitions:
+  caches:
+    node: node_modules
