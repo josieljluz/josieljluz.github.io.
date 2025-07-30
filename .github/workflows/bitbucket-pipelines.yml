@@ -1,0 +1,108 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '1 0 * * *'  # Runs at 00:01 (1 minute past midnight) America/Sao_Paulo time
+
+env:
+  TZ: America/Sao_Paulo
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    container: node:14
+    outputs:
+      metadata: ${{ steps.set-metadata.outputs.metadata }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache node modules
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - name: Install dependencies
+        run: npm install
+      - name: Generate metadata
+        run: node generate_metadata.js
+      - name: Upload metadata artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: files_metadata
+          path: files_metadata.json
+          retention-days: 1
+      - name: Set metadata output
+        id: set-metadata
+        run: echo "::set-output name=metadata::$(cat files_metadata.json | base64 -w 0)"
+
+  download:
+    needs: setup
+    runs-on: ubuntu-latest
+    container: python:3.8
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install requests
+        run: pip install requests
+      - name: Run playlists script
+        run: python playlists.py
+      - name: Upload playlist artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: playlists
+          path: |
+            *.m3u
+            *.xml.gz
+          retention-days: 7
+
+  build:
+    needs: [setup, download]
+    runs-on: ubuntu-latest
+    container: node:14
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+      - name: List files
+        run: |
+          ls -la
+          cp artifacts/* ./ || true
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: build-output
+          path: |
+            *.html
+            *.css
+            *.js
+            *.json
+            *.m3u
+            *.xml.gz
+          retention-days: 7
+
+  deploy:
+    needs: [setup, download, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download all artifacts
+        uses: actions/download-artifact@v2
+        with:
+          path: artifacts
+      - name: Prepare public directory
+        run: |
+          mkdir -p public
+          cp artifacts/* ./ || true
+          cp -r *.html *.css *.js *.json *.m3u *.xml.gz public/ 2>/dev/null || true
+          ls -la public/
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
