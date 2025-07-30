@@ -1,4 +1,4 @@
-name: CI/CD Pipeline 3
+name: CI/CD Pipeline Bitbucket Pages
 
 on:
   push:
