@@ -1,0 +1,156 @@
+# Nome do workflow
+name: CI/CD Pipeline
+
+# Eventos que disparam a execução do workflow
+on:
+  # Executa quando há push para o branch main
+  push:
+    branches: [ main ]
+  # Executa quando há pull request para o branch main
+  pull_request:
+    branches: [ main ]
+  # Executa diariamente às 00:01 no fuso horário de São Paulo
+  schedule:
+    - cron: '1 0 * * *'  # Rodar às 00:01 (1 minuto após meia-noite) no horário de São Paulo
+
+# Variáveis de ambiente globais
+env:
+  TZ: America/Sao_Paulo  # Define o fuso horário para todas as jobs
+
+# Definição das jobs do workflow
+jobs:
+  # Job 1: Configuração inicial
+  setup:
+    runs-on: ubuntu-latest  # Executa no runner mais recente do Ubuntu
+    container: node:14  # Usa container com Node.js 14
+    outputs:  # Define as saídas desta job
+      metadata: ${{ steps.set-metadata.outputs.metadata }}  # Saída com metadados gerados
+    
+    steps:  # Passos da job
+      # Passo 1: Checkout do repositório
+      - uses: actions/checkout@v4  # Versão mais recente da ação de checkout
+      
+      # Passo 2: Cache de dependências do Node.js
+      - name: Cache node modules
+        uses: actions/cache@v4  # Versão mais recente da ação de cache
+        with:
+          path: node_modules  # Pasta a ser cachead
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}  # Chave baseada no OS e no package-lock.json
+          restore-keys: |  # Chaves alternativas para restaurar cache
+            ${{ runner.os }}-node-
+      
+      # Passo 3: Instalação de dependências
+      - name: Install dependencies
+        run: npm install  # Instala dependências do projeto
+      
+      # Passo 4: Geração de metadados
+      - name: Generate metadata
+        run: node generate_metadata.js  # Executa script para gerar metadados
+      
+      # Passo 5: Upload do arquivo de metadados como artefato
+      - name: Upload metadata artifact
+        uses: actions/upload-artifact@v4  # Versão mais recente da ação de upload
+        with:
+          name: files_metadata  # Nome do artefato
+          path: files_metadata.json  # Arquivo a ser enviado
+          retention-days: 1  # Mantém o artefato por 1 dia
+      
+      # Passo 6: Configura a saída com os metadados (codificados em base64)
+      - name: Set metadata output
+        id: set-metadata  # ID para referência posterior
+        run: echo "metadata=$(cat files_metadata.json | base64 -w 0)" >> $GITHUB_OUTPUT  # Nova forma de definir outputs
+
+  # Job 2: Download de playlists
+  download:
+    needs: setup  # Depende da job setup terminar primeiro
+    runs-on: ubuntu-latest  # Executa no runner mais recente do Ubuntu
+    container: python:3.8  # Usa container com Python 3.8
+    
+    steps:
+      # Passo 1: Checkout do repositório
+      - uses: actions/checkout@v4
+      
+      # Passo 2: Instalação da biblioteca requests
+      - name: Install requests
+        run: pip install requests  # Instala biblioteca para requisições HTTP
+      
+      # Passo 3: Execução do script de playlists
+      - name: Run playlists script
+        run: python playlists.py  # Executa script para baixar playlists
+      
+      # Passo 4: Upload das playlists como artefatos
+      - name: Upload playlist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: playlists  # Nome do artefato
+          path: |  # Arquivos a serem enviados
+            *.m3u
+            *.xml.gz
+          retention-days: 7  # Mantém os artefatos por 7 dias
+
+  # Job 3: Build do projeto
+  build:
+    needs: [setup, download]  # Depende das jobs setup e download terminarem
+    runs-on: ubuntu-latest  # Executa no runner mais recente do Ubuntu
+    container: node:14  # Usa container com Node.js 14
+    
+    steps:
+      # Passo 1: Checkout do repositório
+      - uses: actions/checkout@v4
+      
+      # Passo 2: Download dos artefatos das jobs anteriores
+      - name: Download artifacts
+        uses: actions/download-artifact@v4  # Versão mais recente da ação de download
+        with:
+          path: artifacts  # Pasta onde os artefatos serão baixados
+      
+      # Passo 3: Listagem e cópia de arquivos
+      - name: List files
+        run: |
+          ls -la  # Lista arquivos no diretório atual
+          cp artifacts/* ./ || true  # Copia artefatos para o diretório atual (ignora erros)
+      
+      # Passo 4: Upload dos artefatos de build
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output  # Nome do artefato
+          path: |  # Arquivos a serem enviados
+            *.html
+            *.css
+            *.js
+            *.json
+            *.m3u
+            *.xml.gz
+          retention-days: 7  # Mantém os artefatos por 7 dias
+
+  # Job 4: Deploy para GitHub Pages
+  deploy:
+    needs: [setup, download, build]  # Depende de todas as jobs anteriores
+    runs-on: ubuntu-latest  # Executa no runner mais recente do Ubuntu
+    
+    steps:
+      # Passo 1: Checkout do repositório
+      - uses: actions/checkout@v4
+      
+      # Passo 2: Download de todos os artefatos
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts  # Pasta onde os artefatos serão baixados
+      
+      # Passo 3: Preparação do diretório público
+      - name: Prepare public directory
+        run: |
+          mkdir -p public  # Cria diretório public se não existir
+          cp artifacts/* ./ || true  # Copia artefatos para o diretório atual (ignora erros)
+          # Copia arquivos específicos para o diretório public (ignora erros)
+          cp -r *.html *.css *.js *.json *.m3u *.xml.gz public/ 2>/dev/null || true
+          ls -la public/  # Lista conteúdo do diretório public
+      
+      # Passo 4: Deploy para GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3  # Ação para deploy no GitHub Pages
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}  # Token de autenticação
+          publish_dir: ./public  # Diretório a ser publicado
