@@ -1,5 +1,5 @@
 # Nome do workflow
-name: CI/CD Pipeline
+name: CI/CD Pipeline 2
 
 # Eventos que disparam a execução do workflow
 on:
