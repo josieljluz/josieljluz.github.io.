@@ -1,0 +1,140 @@
+name: CI/CD Pipeline GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '1 0 * * *'
+
+env:
+  TZ: America/Sao_Paulo
+
+# Permissões necessárias para o deploy
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    container: node:14
+    outputs:
+      metadata: ${{ steps.set-metadata.outputs.metadata }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Generate metadata
+        run: node generate_metadata.js
+      
+      - name: Upload metadata artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: files_metadata
+          path: files_metadata.json
+          retention-days: 1
+      
+      - name: Set metadata output
+        id: set-metadata
+        run: echo "metadata=$(cat files_metadata.json | base64 -w 0)" >> $GITHUB_OUTPUT
+
+  download:
+    needs: setup
+    runs-on: ubuntu-latest
+    container: python:3.8
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install requests
+        run: pip install requests
+      
+      - name: Run playlists script
+        run: python playlists.py
+      
+      - name: Upload playlist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: playlists
+          path: |
+            *.m3u
+            *.xml.gz
+          retention-days: 7
+
+  build:
+    needs: [setup, download]
+    runs-on: ubuntu-latest
+    container: node:14
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      
+      - name: List files
+        run: |
+          ls -la
+          cp artifacts/* ./ || true
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: |
+            *.html
+            *.css
+            *.js
+            *.json
+            *.m3u
+            *.xml.gz
+          retention-days: 7
+
+  deploy:
+    needs: [setup, download, build]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      
+      - name: Prepare public directory
+        run: |
+          mkdir -p public
+          # Copia todos os arquivos necessários
+          cp -r artifacts/playlists/* ./ || true
+          cp -r artifacts/build-output/* ./ || true
+          cp -r *.html *.css *.js *.json *.m3u *.xml.gz public/ || true
+          ls -la public/
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages
+          force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_message: 'Deploy: ${{ github.sha }}'
+          full_commit_message: 'Deploy to GitHub Pages: ${{ github.sha }}'
