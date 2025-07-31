@@ -88,7 +88,7 @@ jobs:
               diff_hours=$(( (now - run_date) / 3600 ))
 
               # 🧹 Se a execução tiver mais de 6 horas
-              if [ "$diff_hours" -ge 6 ]; then
+              if [ "$diff_hours" -ge 1 ]; then
                 echo "🗑️ Deletando execução ID: $id (Criada há $diff_hours horas)"
 
                 # 🧨 Requisição DELETE para remover a execução usando a API
