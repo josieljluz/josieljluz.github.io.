@@ -1,0 +1,22 @@
+name: 🚀 Disparar Deploy Manual para GitHub Pages
+
+on:
+  workflow_dispatch:  # Permite executar manualmente pela interface do GitHub
+
+env:
+  TZ: America/Sao_Paulo
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Executar deploy do pages-build-deployment
+        run: |
+          curl -X POST \
+            -H "Authorization: token $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/pages-build-deployment.yml/dispatches \
+            -d '{"ref":"main"}'
+        env:
+          TOKEN: ${{ secrets.GH_DEPLOY_TOKEN }}
