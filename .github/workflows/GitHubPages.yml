@@ -1,0 +1,25 @@
+name: 🚀 Disparar Deploy Manual ou Automático para GitHub Pages
+
+# 📆 Gatilhos que disparam a execução do workflow
+on:
+  workflow_dispatch:  # Permite execução manual
+  schedule:
+    - cron: '00 6 * * *'  # 6h UTC = 3h em Fortaleza (UTC-3)
+
+env:
+  TZ: America/Fortaleza  # Define o fuso horário da execução (para logs e scripts)
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Executar deploy do pages-build-deployment
+        run: |
+          curl -X POST \
+            -H "Authorization: token $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/pages-build-deployment.yml/dispatches \
+            -d '{"ref":"main"}'
+        env:
+          TOKEN: ${{ secrets.GH_DEPLOY_TOKEN }}
